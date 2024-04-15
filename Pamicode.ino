@@ -1,11 +1,17 @@
 #include <Wire.h>
 #include <math.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
 #define BACKWARD 0x1
 #define FORWARD 0x0
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void Task1( void *pvParameters );               //Prototype tâche 1
+void Task2( void *pvParameters );               //Prototype tâche 1
+
+
+///////////////////////////////////////////////classe encodeur/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class Codeurs {
 public:
   Codeurs(int address = 0x10);
@@ -107,7 +113,10 @@ void Codeurs::read(int32_t &gauche, int32_t &droit) {
 
 
 Codeurs codeurs;//faut déclarer les codeurs avant la classe robot car cette dernière en a besoin
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////class moteur////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class Moteur {
 public:
   Moteur(int pinPwm, int pinRotation);
@@ -152,7 +161,10 @@ void Moteur::stop(void) {
 
 Moteur moteurGauche(PA13, PA15);
 Moteur moteurDroit(PA12, PA14);
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////class robot//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class robot {
 public:
@@ -409,57 +421,69 @@ int robot::saturationNumerique(int commande) {
   return commande;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////Programme PAMI///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
 
 robot pami(moteurGauche, moteurDroit);
+
+
 int32_t valGauche, valDroite;
 
 void setup() {
-  codeurs.begin();
+
   Serial.begin(115200);
+  while(!Serial){};
+
+   // Now set up two tasks to run independently.
+  xTaskCreate(
+    Task1
+    ,  "First Task"
+    ,  4096  // Stack size
+    ,  NULL
+    ,  1000  // priority
+    ,  NULL );
+
+  xTaskCreate(
+    Task2
+    ,  "Second Task"
+    ,  4096
+    ,  NULL
+    ,  1000
+    ,  NULL );
+
 }
 
 void loop() {
-codeurs.read(valGauche,valDroite);
-Serial.println(valGauche);
 
 }
 
 
 
-
-
-
-
-
-
-
-/*
-
-
-
-void setup() {
+void Task1(void *pvParameters)
+{
+  (void) pvParameters;
   codeurs.begin();
-
-  Serial.begin(115200);
   Serial.println("\nI2C Encoders");
 
   pinMode(PA15, OUTPUT);
   digitalWrite(PA15, OUTPUT);
   pinMode(PA12, OUTPUT);
   pinMode(PA13, OUTPUT);
-}
+  Serial.begin(115200);
 
-void loop() {
-  Serial.println("test");
-  int32_t g, d;
-  Serial.println("CRAC encoders demo");
+  
+  while(1) // A Task shall never return or exit.
+  {
+    printf("\nThead 1");
+    vTaskDelay( 1000 / portTICK_PERIOD_MS ); // wait for one second
+    Serial.println("test");
+    int32_t g, d;
+    Serial.println("CRAC encoders demo");
 
-  Serial.println("Test");
-  while (!codeurs.test()) {
+    Serial.println("Test");
+    while (!codeurs.test()) {
     Serial.println("Codeurs non connectes");
     delay(1000);
   }
@@ -475,6 +499,25 @@ void loop() {
     analogWrite(PA12, 250);
     delay(100);
   }
+  }
 }
 
-*/
+void Task2(void *pvParameters)
+{
+  (void) pvParameters;
+
+  while(1) // A Task shall never return or exit.
+  {
+    printf("\nThead 2");
+    vTaskDelay( 1000 / portTICK_PERIOD_MS ); // wait for one second
+  }
+}
+
+
+
+
+
+
+
+
+
